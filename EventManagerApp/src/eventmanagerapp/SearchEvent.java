@@ -33,70 +33,44 @@ public class SearchEvent extends javax.swing.JFrame {
     }
 
     public void populateArrayList() {
-
-        try {
-            //Write to venues file
-            FileInputStream file = new FileInputStream("Venues.txt");
-            ObjectInputStream inputFile = new ObjectInputStream(file);
-
-            //Add venues
-            boolean endOfFile = false;
-
-            while (!endOfFile) {
-                try {
-                    venues.add((Venue) inputFile.readObject());
-                } catch (EOFException e) {
-                    endOfFile = true;
-                } catch (Exception f) {
-                    JOptionPane.showMessageDialog(null, f.getMessage());
+        // first, load venues the same way you do elsewhere…
+        //venues.clear();
+        try (BufferedReader br = new BufferedReader(new FileReader("Venues.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] p = line.split("\\|");
+                if (p.length == 3) {
+                    venues.add(new Venue(p[0], p[1], Integer.parseInt(p[2])));
                 }
             }
-
-            inputFile.close();
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading venues: " + e.getMessage());
         }
 
-        //Write to Events file
-        try {
-            FileInputStream file2 = new FileInputStream("Events.txt");
-            ObjectInputStream inputFile2 = new ObjectInputStream(file2);
-
-            //Add events
-            boolean endOfFile = false;
-
-            while (!endOfFile) {
-                try {
-                    events.add((Event) inputFile2.readObject());
-                } catch (EOFException e) {
-                    endOfFile = true;
-                } catch (Exception f) {
-                    JOptionPane.showMessageDialog(null, f.getMessage());
+        // now load events from the *same* pipe‑delimited format you write in saveEventsToFile()
+       // events.clear();
+        try (BufferedReader br = new BufferedReader(new FileReader("Events.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] p = line.split("\\|", 5);
+                if (p.length == 5) {
+                    String name = p[0];
+                    String date = p[1];
+                    int time = Integer.parseInt(p[2]);
+                    String desc = p[3];
+                    String venueName = p[4];
+                    // find that Venue object
+                    Venue vObj = venues.stream()
+                            .filter(v -> v.getName().equals(venueName))
+                            .findFirst()
+                            .orElse(null);
+                    events.add(new Event(name, date, time, desc, vObj));
                 }
             }
-
-            inputFile2.close();
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading events: " + e.getMessage());
         }
     }
-
-    //Read the events file
-    /*
-    public static ArrayList<Event> loadEvents(String venues) {
-    ArrayList<Event> events = null;
-    
-    try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("Venues.dat"))) {
-        events = (ArrayList<Event>) ois.readObject();
-    } catch (IOException | ClassNotFoundException ex) {
-        JOptionPane.showMessageDialog(null, ex);
-        ex.printStackTrace();
-    }
-    
-    return events;
-}
-  */
-
 
             /**
              * This method is called from within the constructor to initialize
