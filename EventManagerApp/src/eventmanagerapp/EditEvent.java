@@ -25,7 +25,7 @@ public class EditEvent extends javax.swing.JFrame {
     public EditEvent() {
         initComponents();
 
-        timeFormat = new DecimalFormat("##:##");
+        timeFormat = new DecimalFormat("00' : '00");
 
         events = new ArrayList<Event>();
         venues = new ArrayList<Venue>();
@@ -49,20 +49,34 @@ public class EditEvent extends javax.swing.JFrame {
 
         jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(eventsArray));
 
-        jComboBox1.setSelectedIndex(0);
+        if (eventsArray.length > 0) {
+            jComboBox1.setSelectedIndex(0);
+            // optionally fire its action to populate the fields:
+            jComboBox1ActionPerformed(null);
+        } else {
+            JOptionPane.showMessageDialog(this, "No events to edit!");
+            dispose();
+            return;
+        }
     }
 
     public void saveEventsToFile() {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("Events.txt"))) {
-            for (Event event : events) {
-                // Make sure Venue’s toString() returns a properly formatted string
-                writer.write(event.toString());
+            for (Event e : events) {
+                String line = String.join("|",
+                        e.getEventName(),
+                        e.getDate(),
+                        String.valueOf(e.getTime()),
+                        e.getDescription(),
+                        e.getVenue().getName()
+                );
+                writer.write(line);
                 writer.newLine();
             }
-            JOptionPane.showMessageDialog(null, "Saved Successfully!");
-            this.dispose();
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+            JOptionPane.showMessageDialog(this, "Saved Successfully!");
+            dispose();
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage());
         }
     }
 
@@ -87,55 +101,54 @@ public class EditEvent extends javax.swing.JFrame {
         }
     }
 
-    public void populateArrayList() {
+     public void populateArrayList() {
+        //venues.clear();
+        //events.clear();
 
-        try {
-            //Write to venues file
-            FileInputStream file = new FileInputStream("Venues.txt");
-            ObjectInputStream inputFile = new ObjectInputStream(file);
-
-            //Add venues
-            boolean endOfFile = false;
-
-            while (!endOfFile) {
-                try {
-                    venues.add((Venue) inputFile.readObject());
-                } catch (EOFException e) {
-                    endOfFile = true;
-                } catch (Exception f) {
-                    JOptionPane.showMessageDialog(null, f.getMessage());
+        // --- load venues from pipe-delimited text ---
+        try (BufferedReader br = new BufferedReader(new FileReader("Venues.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] p = line.split("\\|");
+                if (p.length == 3) {
+                    String name = p[0];
+                    String streetName = p[1];
+                    int addrNumber = Integer.parseInt(p[2]);
+                    venues.add(new Venue(name, streetName, addrNumber));
                 }
             }
-
-            inputFile.close();
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading venues: " + e.getMessage());
         }
 
-        //Write to Events file
-        try {
-            FileInputStream file2 = new FileInputStream("Events.txt");
-            ObjectInputStream inputFile2 = new ObjectInputStream(file2);
+        // --- load events from your text file ---
+        // assume Event.toString() writes: name|date|time|description|venueName
+        try (BufferedReader br = new BufferedReader(new FileReader("Events.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] p = line.split("\\|", 5);
+                if (p.length == 5) {
+                    String name = p[0];
+                    String date = p[1];
+                    int time = Integer.parseInt(p[2]);
+                    String desc = p[3];
+                    String venueName = p[4];
 
-            //Add events
-            boolean endOfFile = false;
-
-            while (!endOfFile) {
-                try {
-                    events.add((Event) inputFile2.readObject());
-                } catch (EOFException e) {
-                    endOfFile = true;
-                } catch (Exception f) {
-                    JOptionPane.showMessageDialog(null, f.getMessage());
+                    // find matching Venue object by name
+                    Venue vObj = null;
+                    for (Venue v : venues) {
+                        if (v.getName().equals(venueName)) {
+                            vObj = v;
+                            break;
+                        }
+                    }
+                    events.add(new Event(name, date, time, desc, vObj));
                 }
             }
-
-            inputFile2.close();
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading events: " + e.getMessage());
         }
     }
-
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -294,7 +307,15 @@ public class EditEvent extends javax.swing.JFrame {
             int selectedIndex = jComboBox1.getSelectedIndex();
             events.get(selectedIndex).setEventName(jTextField1.getText());
             events.get(selectedIndex).setDate(jTextField2.getText());
-            events.get(selectedIndex).setTime(Integer.parseInt(jTextField3.getText() + ""));
+            //Set time
+            int timeValue = events.get(selectedIndex).getTime();   // e.g. 930, or 1230, etc.
+            String rawTime = jTextField3.getText().replaceAll("\\D", ""); // remove all non-digit characters
+            if (rawTime.length() != 4) {
+                JOptionPane.showMessageDialog(this, "Please enter time in hh:mm format (e.g. 09:00).");
+                return;
+            }
+            int time = Integer.parseInt(rawTime);
+            events.get(selectedIndex).setTime(time);
             events.get(selectedIndex).setDescription(jTextField4.getText());
 
             Venue venue = venues.get(jComboBox2.getSelectedIndex());
