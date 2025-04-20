@@ -28,41 +28,33 @@ public class AddVenue extends javax.swing.JFrame {
     }
 
     public void populateArrayList() {
-
-        try {
-            //Create file
-            FileInputStream file = new FileInputStream("Venues.txt");
-            ObjectInputStream inputFile = new ObjectInputStream(file);
-
-            boolean endOfFile = false;
-
-            while (!endOfFile) {
-                try {
-                    venues.add((Venue) inputFile.readObject());
-                } catch (EOFException e) {
-                    endOfFile = true;
-                } catch (Exception f) {
-                    JOptionPane.showMessageDialog(null, f.getMessage());
-                }
-            }
-
-            inputFile.close();
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+    venues.clear();
+    try (BufferedReader reader = new BufferedReader(
+            new FileReader("Venues.txt"))) {
+        String line;
+        while ((line = reader.readLine()) != null) {
+            String[] parts = line.split("\\|");
+            String name   = parts[0];
+            String street = parts[1];
+            int    num    = Integer.parseInt(parts[2]);
+            venues.add(new Venue(name, street, num));
         }
+    } catch (Exception e) {
+        e.printStackTrace();
     }
-    
+}
     public void saveVenuesToFile() {
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter("Venues.txt"))) {
-        for (Venue venue : venues) {
-            // Make sure Venue’s toString() returns a properly formatted string
-            writer.write(venue.toString());
+    try (BufferedWriter writer = new BufferedWriter(
+            new FileWriter("Venues.txt"))) {
+        for (Venue v : venues) {
+            // choose a delimiter no one else uses, e.g. |
+            writer.write(v.getName() + "|" + v.getStreetName()+ "|" + v.getAddressNumber());
             writer.newLine();
         }
-        JOptionPane.showMessageDialog(null, "Saved Successfully!");
-        this.dispose();
+        JOptionPane.showMessageDialog(this, "Saved Successfully!");
+        dispose();
     } catch (IOException e) {
-        JOptionPane.showMessageDialog(null, e.getMessage());
+        JOptionPane.showMessageDialog(this, "Error saving venues: " + e);
     }
 }
 
