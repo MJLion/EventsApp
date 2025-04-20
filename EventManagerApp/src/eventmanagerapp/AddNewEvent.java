@@ -23,21 +23,17 @@ public class AddNewEvent extends javax.swing.JFrame {
     /**
      * Creates new form AddNewEvent
      */
-    public AddNewEvent() {
+   public AddNewEvent() {
         initComponents();
 
-        timeFormat = new DecimalFormat("##:##");
+        timeFormat = new DecimalFormat("00' : '00");
 
         events = new ArrayList<Event>();
         venues = new ArrayList<Venue>();
         populateArrayList();
 
         String[] venuesArray = new String[venues.size()];
-        String[] timeOfDay = new String[2];
         
-        timeOfDay[0] = "AM";
-        timeOfDay[1] = "PM";
-
         for (int i = 0; i < venues.size(); i++) {
             venuesArray[i] = venues.get(i).getName();
         }
@@ -46,66 +42,72 @@ public class AddNewEvent extends javax.swing.JFrame {
     }
 
     public void saveEventsToFile() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("Events.txt"))) {
-            for (Event event : events) {
-                // Make sure Venue’s toString() returns a properly formatted string
-                writer.write(event.toString());
-                writer.newLine();
-            }
-            JOptionPane.showMessageDialog(null, "Saved Successfully!");
-            this.dispose();
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter("Events.txt"))) {
+        for (Event e : events) {
+            String line = String.join("|",
+                e.getEventName(),
+                e.getDate(),
+                String.valueOf(e.getTime()),
+                e.getDescription(),
+                e.getVenue().getName()
+            );
+            writer.write(line);
+            writer.newLine();
         }
+        JOptionPane.showMessageDialog(this, "Saved Successfully!");
+        dispose();
+    } catch (IOException ex) {
+        JOptionPane.showMessageDialog(this, ex.getMessage());
+    }
+}
+
+   public void populateArrayList() {
+    // --- load venues from pipe-delimited text ---
+    venues.clear();
+    try (BufferedReader br = new BufferedReader(new FileReader("Venues.txt"))) {
+        String line;
+        while ((line = br.readLine()) != null) {
+            String[] p = line.split("\\|");
+            if (p.length == 3) {
+                venues.add(new Venue(p[0], p[1], Integer.parseInt(p[2])));
+            }
+        }
+    } catch (IOException e) {
+        JOptionPane.showMessageDialog(this, "Error loading venues: " + e.getMessage());
     }
 
-    public void populateArrayList() {
+    // --- load *events* from pipe-delimited text, so we don't lose old ones ---
+    events.clear();
+    try (BufferedReader br = new BufferedReader(new FileReader("Events.txt"))) {
+        String line;
+        while ((line = br.readLine()) != null) {
+            // adjust split count & order to match Event.toString()
+            String[] p = line.split("\\|", 5);
+            if (p.length == 5) {
+                String name      = p[0];
+                String date      = p[1];
+                int    time      = Integer.parseInt(p[2]);
+                String desc      = p[3];
+                String venueName = p[4];
 
-        try {
-            //Create file
-            FileInputStream file = new FileInputStream("Venues.txt");
-            ObjectInputStream inputFile = new ObjectInputStream(file);
-
-            boolean endOfFile = false;
-
-            while (!endOfFile) {
-                try {
-                    venues.add((Venue) inputFile.readObject());
-                } catch (EOFException e) {
-                    endOfFile = true;
-                } catch (Exception f) {
-                    JOptionPane.showMessageDialog(null, f.getMessage());
+                // find the Venue object by name
+                Venue vObj = null;
+                for (Venue v : venues) {
+                    if (v.getName().equals(venueName)) {
+                        vObj = v;
+                        break;
+                    }
                 }
+
+                events.add(new Event(name, date, time, desc, vObj));
             }
-
-            inputFile.close();
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
         }
-
-        //'''
-        try {
-            FileInputStream file2 = new FileInputStream("Events.txt");
-            ObjectInputStream inputFile2 = new ObjectInputStream(file2);
-
-            boolean endOfFile = false;
-
-            while (!endOfFile) {
-                try {
-                    events.add((Event) inputFile2.readObject());
-                } catch (EOFException e) {
-                    endOfFile = true;
-                } catch (Exception f) {
-                    JOptionPane.showMessageDialog(null, f.getMessage());
-                }
-            }
-
-            inputFile2.close();
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
-        }
+    } catch (FileNotFoundException fnf) {
+        // first run: no Events.txt yet—just ignore
+    } catch (IOException ioe) {
+        JOptionPane.showMessageDialog(this, "Error loading events: " + ioe.getMessage());
     }
-
+}
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -263,7 +265,6 @@ public class AddNewEvent extends javax.swing.JFrame {
             String date = jTextField2.getText();
             int time = Integer.parseInt(jTextField3.getText());
             int venueIndex = jComboBox1.getSelectedIndex();
-            int timeIndex = jComboBox2.getSelectedIndex();
             Venue venue = venues.get(venueIndex);
             String description = jTextField4.getText();
 
