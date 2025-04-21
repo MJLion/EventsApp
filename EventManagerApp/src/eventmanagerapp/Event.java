@@ -1,31 +1,35 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package eventmanagerapp;
+
 import java.io.*;
+import java.util.ArrayList;
+import java.text.DecimalFormat;
+
 /**
  *
  * @author nayju
  */
-public class Event implements Serializable{
-    
+public class Event implements Serializable {
+
+    DecimalFormat formatter = new DecimalFormat("00:00");
+
     private String eventName;
     private String date;
     private int time;
     private String description;
     private Venue venue;
+    String category;
 
-    public Event(String eventName, String date, int time, String description, Venue venue) {
+    public Event(String eventName, String date, int time, String description, Venue venue, String category) {
         this.eventName = eventName;
         this.date = date;
         this.time = time;
         this.description = description;
         this.venue = venue;
+        this.category = category;
     }
-    
-    public boolean equals(Event event){
-        
+
+    public boolean equals(Event event) {
+
         return this.eventName.equals(eventName) && this.date.equals(date) && this.description.equals(description);
     }
 
@@ -68,8 +72,23 @@ public class Event implements Serializable{
     public void setVenue(Venue venue) {
         this.venue = venue;
     }
-    
-    
-    
-    
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String formatTime(int time) {
+        String formattedTime;
+
+        int hours = time / 100;
+        int minutes = time % 100;
+        formattedTime = String.format("%02d : %02d", hours, minutes);
+
+        return formattedTime;
+    }
+
 }
