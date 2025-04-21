@@ -17,7 +17,7 @@ public class Event implements Serializable {
     private int time;
     private String description;
     private Venue venue;
-    String category;
+    private String category;
 
     public Event(String eventName, String date, int time, String description, Venue venue, String category) {
         this.eventName = eventName;
