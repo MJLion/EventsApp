@@ -17,15 +17,15 @@ public class EditEvent extends javax.swing.JFrame {
 
     ArrayList<Event> events;
     ArrayList<Venue> venues;
-    DecimalFormat timeFormat;
+
+    //Set Categories to comboBox2
+    String[] categories = {"WorkShops", "Seminars", "Social Events", "Tests"};
 
     /**
      * Creates new form EditEvent
      */
     public EditEvent() {
         initComponents();
-
-        timeFormat = new DecimalFormat("##:##");
 
         events = new ArrayList<Event>();
         venues = new ArrayList<Venue>();
@@ -49,90 +49,86 @@ public class EditEvent extends javax.swing.JFrame {
 
         jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(eventsArray));
 
-        jComboBox1.setSelectedIndex(0);
+        if (eventsArray.length > 0) {
+            jComboBox1.setSelectedIndex(0);
+            // optionally fire its action to populate the fields:
+            jComboBox1ActionPerformed(null);
+        } else {
+            JOptionPane.showMessageDialog(this, "No events to edit!");
+            dispose();
+            return;
+        }
+        jComboBox3.setModel(new javax.swing.DefaultComboBoxModel<>(categories));
     }
 
     public void saveEventsToFile() {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("Events.txt"))) {
-            for (Event event : events) {
-                // Make sure Venue’s toString() returns a properly formatted string
-                writer.write(event.toString());
+            for (Event e : events) {
+                String line = String.join("|",
+                        e.getEventName(),
+                        e.getDate(),
+                        String.valueOf(e.getTime()),
+                        e.getDescription(),
+                        e.getVenue().getName(),
+                        e.getCategory()
+                );
+                writer.write(line);
                 writer.newLine();
             }
-            JOptionPane.showMessageDialog(null, "Saved Successfully!");
-            this.dispose();
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
-        }
-    }
-
-    public void saveEventsToFileDelete() {
-        try {
-            FileOutputStream file = new FileOutputStream("Events.txt");
-            ObjectOutputStream outputFile = new ObjectOutputStream(file);
-
-            //Write to file
-            for (int i = 0; i < events.size(); i++) {
-                outputFile.writeObject(events.get(i));
-            }
-
-            outputFile.close();
-
-            JOptionPane.showMessageDialog(null, "Successfully deleted!");
-
-            //close the window after saving
-            this.dispose();
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+            JOptionPane.showMessageDialog(this, "Saved Successfully!");
+            dispose();
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage());
         }
     }
 
     public void populateArrayList() {
+        //venues.clear();
+        //events.clear();
 
-        try {
-            //Write to venues file
-            FileInputStream file = new FileInputStream("Venues.txt");
-            ObjectInputStream inputFile = new ObjectInputStream(file);
-
-            //Add venues
-            boolean endOfFile = false;
-
-            while (!endOfFile) {
-                try {
-                    venues.add((Venue) inputFile.readObject());
-                } catch (EOFException e) {
-                    endOfFile = true;
-                } catch (Exception f) {
-                    JOptionPane.showMessageDialog(null, f.getMessage());
+        // --- load venues from pipe-delimited text ---
+        try (BufferedReader br = new BufferedReader(new FileReader("Venues.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] p = line.split("\\|");
+                if (p.length == 3) {
+                    String name = p[0];
+                    String streetName = p[1];
+                    int addrNumber = Integer.parseInt(p[2]);
+                    venues.add(new Venue(name, streetName, addrNumber));
                 }
             }
-
-            inputFile.close();
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading venues: " + e.getMessage());
         }
 
-        //Write to Events file
-        try {
-            FileInputStream file2 = new FileInputStream("Events.txt");
-            ObjectInputStream inputFile2 = new ObjectInputStream(file2);
+        // --- load events from text file ---
+        // assume Event.toString() writes: name|date|time|description|venueName
+        try (BufferedReader br = new BufferedReader(new FileReader("Events.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] p = line.split("\\|", 6);
+                if (p.length == 6) {
+                    String name = p[0];
+                    String date = p[1];
+                    int time = Integer.parseInt(p[2]);
+                    String desc = p[3];
+                    String venueName = p[4];
+                    String category = p[5];
 
-            //Add events
-            boolean endOfFile = false;
-
-            while (!endOfFile) {
-                try {
-                    events.add((Event) inputFile2.readObject());
-                } catch (EOFException e) {
-                    endOfFile = true;
-                } catch (Exception f) {
-                    JOptionPane.showMessageDialog(null, f.getMessage());
+                    // find matching Venue object by name
+                    Venue venueObj = null;
+                    for (Venue v : venues) {
+                        if (v.getName().equals(venueName)) {
+                            venueObj = v;
+                            break;
+                        }
+                    }
+                    events.add(new Event(name, date, time, desc, venueObj, category));
                 }
             }
-
-            inputFile2.close();
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading events: " + e.getMessage());
         }
     }
 
@@ -142,7 +138,7 @@ public class EditEvent extends javax.swing.JFrame {
      * regenerated by the Form Editor.
      */
     @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">                          
     private void initComponents() {
 
         jLabel1 = new javax.swing.JLabel();
@@ -160,6 +156,8 @@ public class EditEvent extends javax.swing.JFrame {
         jLabel5 = new javax.swing.JLabel();
         jTextField3 = new javax.swing.JTextField();
         jTextField4 = new javax.swing.JTextField();
+        jLabel8 = new javax.swing.JLabel();
+        jComboBox3 = new javax.swing.JComboBox<>();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Edit Event Details");
@@ -214,20 +212,23 @@ public class EditEvent extends javax.swing.JFrame {
             }
         });
 
+        jLabel8.setText("Choose a Category:");
+
+        jComboBox3.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addGap(142, 142, 142)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, 109, Short.MAX_VALUE)
-                            .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jLabel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                        .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(jLabel5, javax.swing.GroupLayout.Alignment.LEADING))
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jLabel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, 109, Short.MAX_VALUE)
+                    .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jLabel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, 109, Short.MAX_VALUE)
+                    .addComponent(jLabel5)
                     .addComponent(jLabel7))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
@@ -243,39 +244,44 @@ public class EditEvent extends javax.swing.JFrame {
                     .addComponent(jComboBox2, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addGap(52, 52, 52)
-                        .addComponent(jLabel1)))
-                .addContainerGap(168, Short.MAX_VALUE))
+                        .addComponent(jLabel1))
+                    .addComponent(jComboBox3, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(264, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addGap(22, 22, 22)
                 .addComponent(jLabel1)
-                .addGap(28, 28, 28)
+                .addGap(74, 74, 74)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel2))
-                .addGap(26, 26, 26)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel8)
+                    .addComponent(jComboBox3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(20, 20, 20)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(jLabel3)
                     .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(jLabel4)
                     .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(jLabel7)
                     .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(jLabel5)
                     .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(27, 27, 27)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(jLabel6)
                     .addComponent(jComboBox2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 40, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 43, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
                     .addComponent(jButton1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
@@ -283,9 +289,9 @@ public class EditEvent extends javax.swing.JFrame {
         );
 
         pack();
-    }// </editor-fold>//GEN-END:initComponents
+    }// </editor-fold>                        
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {                                         
         // TODO add your handling code here:
 
         if (jTextField1.getText().isEmpty() || jTextField2.getText().isEmpty() || jTextField3.getText().isEmpty() || jTextField4.getText().isEmpty()) {
@@ -294,29 +300,42 @@ public class EditEvent extends javax.swing.JFrame {
             int selectedIndex = jComboBox1.getSelectedIndex();
             events.get(selectedIndex).setEventName(jTextField1.getText());
             events.get(selectedIndex).setDate(jTextField2.getText());
-            events.get(selectedIndex).setTime(Integer.parseInt(jTextField3.getText() + ""));
+            //Set time
+            int timeValue = events.get(selectedIndex).getTime();   // e.g. 930, or 1230, etc.
+            String rawTime = jTextField3.getText().replaceAll("\\D", ""); // remove all non-digit characters
+            if (rawTime.length() != 4) {
+                JOptionPane.showMessageDialog(this, "Please enter time in hh:mm format (e.g. 09:00).");
+                return;
+            }
+            int time = Integer.parseInt(rawTime);
+            events.get(selectedIndex).setTime(time);
             events.get(selectedIndex).setDescription(jTextField4.getText());
-
+            String category = (String) jComboBox3.getSelectedItem();
+            events.get(selectedIndex).setCategory(category);
             Venue venue = venues.get(jComboBox2.getSelectedIndex());
             events.get(selectedIndex).setVenue(venue);
 
             saveEventsToFile();
 
         }
-    }//GEN-LAST:event_jButton1ActionPerformed
+    }                                        
 
-    private void jTextField3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField3ActionPerformed
+    private void jTextField3ActionPerformed(java.awt.event.ActionEvent evt) {                                            
         // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField3ActionPerformed
+    }                                           
 
-    private void jComboBox1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBox1ActionPerformed
+    private void jComboBox1ActionPerformed(java.awt.event.ActionEvent evt) {                                           
         // TODO add your handling code here:
 
         int selectedIndex = jComboBox1.getSelectedIndex();
 
         jTextField1.setText(events.get(selectedIndex).getEventName());
         jTextField2.setText(events.get(selectedIndex).getDate());
-        jTextField3.setText(events.get(selectedIndex).getTime() + "");
+        int rawTime = events.get(selectedIndex).getTime(); // e.g., 930
+        int hours = rawTime / 100;
+        int minutes = rawTime % 100;
+        String formatted = String.format("%02d : %02d", hours, minutes);
+        jTextField3.setText(formatted);
         jTextField4.setText(events.get(selectedIndex).getDescription());
 
         Venue venue = events.get(selectedIndex).getVenue();
@@ -329,20 +348,22 @@ public class EditEvent extends javax.swing.JFrame {
             }
         }
         jComboBox2.setSelectedIndex(index);
-    }//GEN-LAST:event_jComboBox1ActionPerformed
+        String category = events.get(selectedIndex).getCategory();
+        jComboBox3.setSelectedItem(category);
+    }                                          
 
-    private void jComboBox2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBox2ActionPerformed
+    private void jComboBox2ActionPerformed(java.awt.event.ActionEvent evt) {                                           
         // TODO add your handling code here:
-    }//GEN-LAST:event_jComboBox2ActionPerformed
+    }                                          
 
-    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {                                         
         // TODO add your handling code here:
 
         int selectedIndex = jComboBox1.getSelectedIndex();
         events.remove(selectedIndex);
 
-        saveEventsToFileDelete();
-    }//GEN-LAST:event_jButton2ActionPerformed
+        saveEventsToFile();
+    }                                        
 
     /**
      * @param args the command line arguments
@@ -379,11 +400,12 @@ public class EditEvent extends javax.swing.JFrame {
         });
     }
 
-    // Variables declaration - do not modify//GEN-BEGIN:variables
+    // Variables declaration - do not modify                     
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton2;
     private javax.swing.JComboBox<String> jComboBox1;
     private javax.swing.JComboBox<String> jComboBox2;
+    private javax.swing.JComboBox<String> jComboBox3;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
@@ -391,9 +413,10 @@ public class EditEvent extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
     private javax.swing.JTextField jTextField1;
     private javax.swing.JTextField jTextField2;
     private javax.swing.JTextField jTextField3;
     private javax.swing.JTextField jTextField4;
-    // End of variables declaration//GEN-END:variables
+    // End of variables declaration                   
 }
